@@ -1,0 +1,70 @@
+
+
+<!DOCTYPE html>
+
+<html>
+  <body>
+    <style>
+      * {
+        margin:0;
+        padding:0;
+      }
+      html,body {
+        height:100%;
+        width:100%;
+      }
+    </style>
+    <div id='playerV3Container' style='width:100%;height:100%'></div>
+    <script>
+      var params = window.location.href;
+      var ec = params.match(/(ec|embedCode)=([^&]*)/)[2];
+      var pbid = params.match(/pbid=([^&]*)/)[1];
+      //for backwards compatibility, adding a check whether the platform param exists
+      //and defaulting to flash-priority (the old hard-coded value) if not
+      var platformParam = params.match(/platform=([^&]*)/);
+      var platform = (platformParam ? platformParam[1] : "flash-priority");
+
+      // Options can be passed along to the options hash for Player.create using the form
+      // &options[< zero or many hashes>.key]=value
+      // ie: &options[ad-manager.ad-id]=123 -> Player.create(id, ec, {ad-manager:{ad-id:123}})
+      // You can also pass in top-level parameters (options[key]=value) or arbitrarily deep parameters
+      // (options[hash.hash.hash.hash.hash.key]=value) and define as many options as URL length
+      // restraints will allow (&options[autoplay]=true&options[ad-manager.pre-roll]=true)
+      var playerParams = {isTwitter: true};
+      var queryTokens = params.split(/[\?\&]/);
+      for (var i=0; i<queryTokens.length; i++) {
+        try {
+          var match = queryTokens[i].match(/^options\[([^\]]+)\]=(.+)/);
+          if (match) {
+            var currentLevel = playerParams;
+            var keySplits = match[1].split(".");
+            while (keySplits.length > 1) {
+              var key = keySplits.shift();
+              if (currentLevel[key] === undefined)
+                currentLevel[key] = {};
+              currentLevel = currentLevel[key];
+            }
+            if (typeof currentLevel === 'string')
+              throw("Ooyala Exception: Invalid query parameter");
+
+            currentLevel[keySplits[0]] = decodeURIComponent(match[2]);
+          }
+        }
+        catch (e) {
+          //Tell them it's an error coming from us and not some native-looking exception
+          throw("Ooyala Exception: Invalid query parameter");
+        }
+      }
+
+      var markup = "<scr" + "ipt src='//player.ooyala.com/v3/"+pbid+"?platform="+platform+"'/></scr" + "ipt>";
+      markup += "<scr" + "ipt type='text/javascript' charset='utf-8'>";
+      markup += "window.onload = (function() {";
+      markup += "  OO.ready(function() {";
+      markup += "    OO.Player.create('playerV3Container', '"+ec+"', "+JSON.stringify(playerParams)+");";
+      markup += "  });";
+      markup += "});";
+      markup += "</scr" + "ipt>";
+      document.write(markup);
+    </script>
+  </body>
+</html>
